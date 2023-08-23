@@ -5,8 +5,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.sqs.SqsClient;
 import software.amazon.awssdk.services.sqs.model.*;
 
-import java.util.HashMap;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class Sever {
@@ -110,6 +109,16 @@ public class Sever {
                     System.out.println(messageBody);
                     System.out.println();
                 }
+            } else if (messageBody.startsWith("SG")) {
+                String[] room = rooms.get(messageBody.substring(5));
+                room[0] = "Playing";
+                room[1] = "Playing";
+                String cards = getCardsMessage();
+                System.out.println("SG|0|" + messageBody.substring(5) + "|" + cards);
+                os.messageSent("SG|0|" + messageBody.substring(5) + "|" + cards, "SG", "SG");
+                System.out.println("SG|1|" + messageBody.substring(5) + "|" + cards);
+                os.messageSent("SG|0|" + messageBody.substring(5) + "|" + cards, "SG", "SG");
+
             }
 
 
@@ -124,6 +133,32 @@ public class Sever {
             sqsClient.deleteMessage(deleteRequest);
         }
         return returnInfor;
+    }
+
+    String getCardsMessage() {
+        StringBuilder message = new StringBuilder();
+        Set<Integer> cardNums = new LinkedHashSet<>();
+        while (cardNums.size() < 24) {
+            cardNums.add((int) (Math.random() * 32) + 1);
+
+        }
+        ArrayList<Integer> list = new ArrayList<>(cardNums);
+        message.append(list.get(0));
+        for (int i = 1; i < 24; i++) {
+
+            if (i % 6 == 0) {
+                message.append("*");
+            } else {
+                message.append(",");
+            }
+            message.append(list.get(i));
+        }
+        int answer1 = list.get((int) (Math.random() * 24));
+        int answer2 = list.get((int) (Math.random() * 24));
+        while (answer1 == answer2) {
+            answer2 = list.get((int) (Math.random() * 24));
+        }
+        return answer1 + "#" + answer2 + "#" + message;
     }
 
 
