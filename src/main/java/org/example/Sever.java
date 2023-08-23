@@ -96,6 +96,21 @@ public class Sever {
                     System.out.println();
                 }
             }
+            // Ready
+            else if (messageBody.startsWith("RD")) {
+                String[] room = rooms.get(messageBody.substring(5));
+                if (room[0].equals("Ready")) {
+                    room[1] = "Ready";
+                    os.messageSent(messageBody, "RD", "RD");
+                    System.out.println(messageBody);
+                    System.out.println();
+                } else {
+                    room[0] = "Ready";
+                    os.messageSent(messageBody, "RD", "RD");
+                    System.out.println(messageBody);
+                    System.out.println();
+                }
+            }
 
 
             returnInfor = messageBody;
