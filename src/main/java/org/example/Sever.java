@@ -74,6 +74,29 @@ public class Sever {
                 System.out.println(roomID);
                 System.out.println();
             }
+            // Join room
+            else if (messageBody.startsWith("ER")) {
+                String roomID = messageBody.substring(5);
+
+                if (rooms.get(roomID) != null) {
+                    String[] room = rooms.get(roomID);
+                    if (room[1] == null) {
+                        room[1] = "Waiting";
+                        os.messageSent("ER|1|" + roomID + "|Y", "ER", "ER");
+                        System.out.println("ER|1|" + roomID + "|Y");
+                        System.out.println();
+                    } else {
+                        os.messageSent("ER|1|" + roomID + "|N", "ER", "ER");
+                        System.out.println("ER|1|" + roomID + "|N");
+                        System.out.println();
+                    }
+                } else {
+                    os.messageSent("ER|1|" + roomID + "|N", "ER", "ER");
+                    System.out.println("ER|1|" + roomID + "|N");
+                    System.out.println();
+                }
+            }
+
 
             returnInfor = messageBody;
             System.out.println("Received message: " + messageBody);
