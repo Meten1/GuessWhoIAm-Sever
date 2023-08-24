@@ -120,6 +120,32 @@ public class Sever {
                 os.messageSent("SG|0|" + messageBody.substring(5) + "|" + cards, "SG", "SG");
 
             }
+            // In game's message
+            else if (messageBody.startsWith("IG")) {
+                String[] room = rooms.get(messageBody.substring(5, 11));
+                if (messageBody.charAt(3) == '0') {
+                    room[2] = messageBody.substring(12);
+                    if (room[3] != null) {
+                        System.out.println("IG|0|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
+                        os.messageSent("IG|0|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+
+                        System.out.println("IG|1|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
+                        os.messageSent("IG|1|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+
+                    }
+                } else {
+                    room[3] = messageBody.substring(12);
+                    if (room[2] != null) {
+                        System.out.println("IG|0|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
+                        os.messageSent("IG|0|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+
+                        System.out.println("IG|1|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
+                        os.messageSent("IG|1|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+
+                    }
+                }
+
+            }
 
 
             returnInfor = messageBody;
@@ -161,5 +187,16 @@ public class Sever {
         return answer1 + "#" + answer2 + "#" + message;
     }
 
+    String getWinner(int score1, int score2) {
+        int winner;
+        if (score1 > score2) {
+            winner = 0;
+        } else if (score1 < score2) {
+            winner = 1;
+        } else {
+            winner = 2;
+        }
+        return "|" + winner;
+    }
 
 }
