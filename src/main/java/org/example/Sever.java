@@ -144,7 +144,13 @@ public class Sever {
 
                     }
                 }
+            }
 
+            // Exit the game
+            else if (messageBody.startsWith("EG")) {
+                rooms.clear();
+                os.messageSent(messageBody, "EG", "EG");
+                System.out.println(messageBody);
             }
 
 
