@@ -45,7 +45,7 @@ public class Sever {
         return head + ThreadLocalRandom.current().nextLong(100000, 1000000);
     }
 
-    public String GettingMessageSQS(Sever os) {
+    public String GettingMessageSQS() {
         SqsClient sqsClient = SqsClient.builder()
                 .region(Region.US_WEST_2)
                 .credentialsProvider(DefaultCredentialsProvider.create())
@@ -61,95 +61,94 @@ public class Sever {
         String returnInfor = "";
         for (Message message : receiveResponse.messages()) {
             String messageBody = message.body();
+            String groupID = messageBody.substring(messageBody.indexOf('?'));
+
+            System.out.println("The Message Got Now: " + messageBody);
+            System.out.print("The Message Send Now:");
 
 
-            // New room
             if (messageBody.startsWith("NRN")) {
                 String roomID = getRandomID("NRN|0|");
-                // test room id
+
 //                String roomID = "NRN|0|123456";
                 rooms.put(roomID.substring(6), new String[]{"Waiting", null, null, null});
-                os.messageSent(roomID, "NRN", "NRN");
-                System.out.println(roomID);
+
+                String megSent = roomID + groupID;
+
+                messageSent(megSent, "NRN", "NRN");
+                System.out.println(megSent);
                 System.out.println();
-            }
-            // Join room
-            else if (messageBody.startsWith("ER")) {
-                String roomID = messageBody.substring(5);
+            } else if (messageBody.startsWith("ER")) {
+                String roomID = messageBody.substring(5, messageBody.indexOf('?'));
 
                 if (rooms.get(roomID) != null) {
                     String[] room = rooms.get(roomID);
                     if (room[1] == null) {
                         room[1] = "Waiting";
-                        os.messageSent("ER|1|" + roomID + "|Y", "ER", "ER");
-                        System.out.println("ER|1|" + roomID + "|Y");
+                        String segSent = "ER|1|" + roomID + "|Y" + groupID;
+                        messageSent(segSent, "ER", "ER");
+                        System.out.println(segSent);
                         System.out.println();
                     } else {
-                        os.messageSent("ER|1|" + roomID + "|N", "ER", "ER");
-                        System.out.println("ER|1|" + roomID + "|N");
+                        String segSent = "ER|1|" + roomID + "|N" + groupID;
+                        messageSent(segSent, "ER", "ER");
+                        System.out.println(segSent);
                         System.out.println();
                     }
                 } else {
-                    os.messageSent("ER|1|" + roomID + "|N", "ER", "ER");
-                    System.out.println("ER|1|" + roomID + "|N");
+                    String segSent = "ER|1|" + roomID + "|N" + groupID;
+                    messageSent(segSent, "ER", "ER");
+                    System.out.println(segSent);
                     System.out.println();
                 }
-            }
-            // Ready
-            else if (messageBody.startsWith("RD")) {
-                String[] room = rooms.get(messageBody.substring(5));
-                if (room[0].equals("Ready")) {
-                    room[1] = "Ready";
-                    os.messageSent(messageBody, "RD", "RD");
-                    System.out.println(messageBody);
-                    System.out.println();
-                } else {
-                    room[0] = "Ready";
-                    os.messageSent(messageBody, "RD", "RD");
-                    System.out.println(messageBody);
-                    System.out.println();
-                }
+            } else if (messageBody.startsWith("RD")) {
+                String[] room = rooms.get(messageBody.substring(5, messageBody.indexOf('?')));
+                room[0] = "Ready";
+                room[1] = "Ready";
+                String megSent = messageBody.substring(0, 3) + "0" + messageBody.substring(4);
+                messageSent(megSent, "RD", "RD");
+
+                System.out.println(megSent);
+                System.out.println();
             } else if (messageBody.startsWith("SG")) {
-                String[] room = rooms.get(messageBody.substring(5));
+                String[] room = rooms.get(messageBody.substring(5, messageBody.indexOf('?')));
                 room[0] = "Playing";
                 room[1] = "Playing";
                 String cards = getCardsMessage();
-                System.out.println("SG|0|" + messageBody.substring(5) + "|" + cards);
-                os.messageSent("SG|0|" + messageBody.substring(5) + "|" + cards, "SG", "SG");
-                System.out.println("SG|1|" + messageBody.substring(5) + "|" + cards);
-                os.messageSent("SG|0|" + messageBody.substring(5) + "|" + cards, "SG", "SG");
+                System.out.println("SG|0|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards);
+                messageSent("SG|0|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards, "SG", "SG");
 
-            }
-            // In game's message
-            else if (messageBody.startsWith("IG")) {
-                String[] room = rooms.get(messageBody.substring(5, 11));
+                System.out.println("SG|1|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards);
+                messageSent("SG|0|" + messageBody.substring(5, messageBody.indexOf('?')) + "|", "SG", "SG");
+
+            } else if (messageBody.startsWith("IG")) {
+                String roomID = messageBody.substring(5, 11);
+                String[] room = rooms.get(roomID);
                 if (messageBody.charAt(3) == '0') {
-                    room[2] = messageBody.substring(12);
+                    room[2] = messageBody.substring(12, 13);
                     if (room[3] != null) {
-                        System.out.println("IG|0|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
-                        os.messageSent("IG|0|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+                        System.out.println("IG|0|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
+                        messageSent("IG|0|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
 
-                        System.out.println("IG|1|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
-                        os.messageSent("IG|1|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+                        System.out.println("IG|1|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
+                        messageSent("IG|1|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
 
                     }
                 } else {
-                    room[3] = messageBody.substring(12);
+                    room[3] = messageBody.substring(12, 13);
                     if (room[2] != null) {
-                        System.out.println("IG|0|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
-                        os.messageSent("IG|0|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+                        System.out.println("IG|0|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
+                        messageSent("IG|0|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
 
-                        System.out.println("IG|1|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
-                        os.messageSent("IG|1|" + messageBody.substring(5, 11) + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+                        System.out.println("IG|1|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
+                        messageSent("IG|1|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
 
                     }
                 }
-            }
 
-            // Exit the game
-            else if (messageBody.startsWith("EG")) {
+            } else if (messageBody.startsWith("EG")) {
                 rooms.clear();
-                os.messageSent(messageBody, "EG", "EG");
+                messageSent(messageBody, "EG", "EG");
                 System.out.println(messageBody);
             }
 
@@ -172,17 +171,11 @@ public class Sever {
         Set<Integer> cardNums = new LinkedHashSet<>();
         while (cardNums.size() < 24) {
             cardNums.add((int) (Math.random() * 32) + 1);
-
         }
         ArrayList<Integer> list = new ArrayList<>(cardNums);
         message.append(list.get(0));
         for (int i = 1; i < 24; i++) {
-
-            if (i % 6 == 0) {
-                message.append("*");
-            } else {
-                message.append(",");
-            }
+            message.append(",");
             message.append(list.get(i));
         }
         int answer1 = list.get((int) (Math.random() * 24));
