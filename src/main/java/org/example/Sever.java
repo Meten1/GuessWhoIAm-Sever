@@ -36,7 +36,8 @@ public class Sever {
 
         sqsClient.sendMessage(sendMessageRequest);
 
-        System.out.println("Message sent successfully.");
+        System.out.println("The message sent is: " + massage);
+        System.out.println();
     }
 
 
@@ -64,7 +65,6 @@ public class Sever {
             String groupID = messageBody.substring(messageBody.indexOf('?'));
 
             System.out.println("The Message Got Now: " + messageBody);
-            System.out.print("The Message Send Now:");
 
 
             if (messageBody.startsWith("NRN")) {
@@ -76,8 +76,7 @@ public class Sever {
                 String megSent = roomID + groupID;
 
                 messageSent(megSent, "NRN", "NRN");
-                System.out.println(megSent);
-                System.out.println();
+
             } else if (messageBody.startsWith("ER")) {
                 String roomID = messageBody.substring(5, messageBody.indexOf('?'));
 
@@ -92,8 +91,7 @@ public class Sever {
                     } else {
                         String segSent = "ER|1|" + roomID + "|N" + groupID;
                         messageSent(segSent, "ER", "ER");
-                        System.out.println(segSent);
-                        System.out.println();
+
                     }
                 } else {
                     String segSent = "ER|1|" + roomID + "|N" + groupID;
@@ -108,48 +106,56 @@ public class Sever {
                 String megSent = messageBody.substring(0, 3) + "0" + messageBody.substring(4);
                 messageSent(megSent, "RD", "RD");
 
-                System.out.println(megSent);
-                System.out.println();
             } else if (messageBody.startsWith("SG")) {
                 String[] room = rooms.get(messageBody.substring(5, messageBody.indexOf('?')));
                 room[0] = "Playing";
                 room[1] = "Playing";
-                String cards = getCardsMessage();
-                System.out.println("SG|0|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards);
+                String cards;
+                if (room[4] == null) {
+                    cards = getCardsMessage();
+                    room[4] = cards;
+                } else {
+                    cards = room[4];
+                }
                 messageSent("SG|0|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards, "SG", "SG");
 
-                System.out.println("SG|1|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards);
                 messageSent("SG|0|" + messageBody.substring(5, messageBody.indexOf('?')) + "|", "SG", "SG");
 
             } else if (messageBody.startsWith("IG")) {
                 String roomID = messageBody.substring(5, 11);
                 String[] room = rooms.get(roomID);
                 if (messageBody.charAt(3) == '0') {
-                    room[2] = messageBody.substring(12, 13);
-                    if (room[3] != null) {
-                        System.out.println("IG|0|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
-                        messageSent("IG|0|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
+                    room[0] = messageBody.substring(12, messageBody.indexOf('?'));
+                    if (!room[1].equals("Playing")) {
+                        messageSent("IG|0|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
+                        messageSent("IG|1|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
+                        room[4] = null;
+                        if (getWinner(Integer.parseInt(room[0]), Integer.parseInt(room[1])) == 0) {
+                            room[2] += "*";
+                        } else {
+                            room[3] += "*";
+                        }
 
-                        System.out.println("IG|1|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
-                        messageSent("IG|1|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
 
                     }
                 } else {
-                    room[3] = messageBody.substring(12, 13);
-                    if (room[2] != null) {
-                        System.out.println("IG|0|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
-                        messageSent("IG|0|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
-
-                        System.out.println("IG|1|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])));
-                        messageSent("IG|1|" + roomID + getWinner(Integer.parseInt(room[2]), Integer.parseInt(room[3])), "IG", "IG");
-
+                    room[1] = messageBody.substring(12, messageBody.indexOf('?'));
+                    if (!room[0].equals("Playing")) {
+                        messageSent("IG|0|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
+                        messageSent("IG|1|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
+                        room[4] = null;
+                        if (getWinner(Integer.parseInt(room[0]), Integer.parseInt(room[1])) == 0) {
+                            room[2] += "*";
+                        } else {
+                            room[3] += "*";
+                        }
                     }
+
                 }
 
             } else if (messageBody.startsWith("EG")) {
                 rooms.clear();
                 messageSent(messageBody, "EG", "EG");
-                System.out.println(messageBody);
             }
 
 
@@ -186,16 +192,14 @@ public class Sever {
         return answer1 + "#" + answer2 + "#" + message;
     }
 
-    String getWinner(int score1, int score2) {
-        int winner;
+    int getWinner(int score1, int score2) {
         if (score1 > score2) {
-            winner = 0;
+            return 1;
         } else if (score1 < score2) {
-            winner = 1;
+            return 0;
         } else {
-            winner = 2;
+            return 2;
         }
-        return "|" + winner;
     }
 
 }
