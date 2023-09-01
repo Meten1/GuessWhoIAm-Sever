@@ -202,4 +202,38 @@ public class Sever {
         }
     }
 
+    void deleteAllMessage() {
+        SqsClient sqsClient = SqsClient.builder()
+                .region(Region.US_WEST_2)
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .build();
+        ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
+                .queueUrl(inputUrl)
+                .maxNumberOfMessages(10)
+                .waitTimeSeconds(10)
+                .build();
+        ReceiveMessageResponse receiveResponse = sqsClient.receiveMessage(receiveRequest);
+        for (Message message : receiveResponse.messages()) {
+            DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder()
+                    .queueUrl(inputUrl)
+                    .receiptHandle(message.receiptHandle())
+                    .build();
+            sqsClient.deleteMessage(deleteRequest);
+        }
+
+        receiveRequest = ReceiveMessageRequest.builder()
+                .queueUrl(outputUrl)
+                .maxNumberOfMessages(10)
+                .waitTimeSeconds(10)
+                .build();
+        receiveResponse = sqsClient.receiveMessage(receiveRequest);
+        for (Message message : receiveResponse.messages()) {
+            DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder()
+                    .queueUrl(outputUrl)
+                    .receiptHandle(message.receiptHandle())
+                    .build();
+            sqsClient.deleteMessage(deleteRequest);
+        }
+    }
+
 }
