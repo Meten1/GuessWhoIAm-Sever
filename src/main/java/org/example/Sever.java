@@ -16,7 +16,8 @@ public class Sever {
     // Due to AWS not allowing urls to be placed in public areas, the urls in the GitHub library have been processed but the urls in the files running locally and on the server are correct.
 
     String inputUrl = "https://truly URL has be hided";
-    String outputUrl = "https://truly URL has be hided";
+    String outputUrl1 = "https://truly URL has be hided";
+    String outputUrl2 = "https://truly URL has be hided";
     Region position;
 
 
@@ -36,19 +37,19 @@ public class Sever {
     }
 
     /**
-     * The message sending function, used to create a connection client with Output SQS and send messages.
+     * The message sending function, used to create a connection client with Output1 SQS and send messages.
      *
      * @param massage   The message content
      * @param GroupHead The message's group id head
      * @param DPHead    The message's deduplication id head
      */
-    void messageSent(String massage, String GroupHead, String DPHead) {
+    void messageSent1(String massage, String GroupHead, String DPHead) {
         SqsClient sqsClient = SqsClient.builder()
                 .region(position)
                 .build();
 
         SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
-                .queueUrl(outputUrl)
+                .queueUrl(outputUrl1)
                 .messageGroupId(getRandomID(GroupHead))
                 .messageBody(massage)
                 .messageDeduplicationId(getRandomID(DPHead))
@@ -56,8 +57,29 @@ public class Sever {
         System.out.println("The message sent is: " + massage + "\n");
 
         sqsClient.sendMessage(sendMessageRequest);
+    }
 
-//        System.out.println("Message sent successfully.");
+    /**
+     * The message sending function, used to create a connection client with Output2 SQS and send messages.
+     *
+     * @param massage   The message content
+     * @param GroupHead The message's group id head
+     * @param DPHead    The message's deduplication id head
+     */
+    void messageSent2(String massage, String GroupHead, String DPHead) {
+        SqsClient sqsClient = SqsClient.builder()
+                .region(position)
+                .build();
+
+        SendMessageRequest sendMessageRequest = SendMessageRequest.builder()
+                .queueUrl(outputUrl2)
+                .messageGroupId(getRandomID(GroupHead))
+                .messageBody(massage)
+                .messageDeduplicationId(getRandomID(DPHead))
+                .build();
+        System.out.println("The message sent is: " + massage + "\n");
+
+        sqsClient.sendMessage(sendMessageRequest);
     }
 
     /**
@@ -122,7 +144,7 @@ public class Sever {
 
             // NRN - New Room
             if (messageBody.startsWith("NRN")) {
-                creatNewRoom(groupID);
+                creatNewRoom(groupID, messageBody);
             }
 
             // ER - Entry Room
@@ -133,7 +155,7 @@ public class Sever {
             // RD - Ready
             else if (messageBody.startsWith("RD")) {
                 String megSent = messageBody.substring(0, 3) + "0" + messageBody.substring(4);
-                messageSent(megSent, "RD", "RD");
+                messageSent1(megSent, "RD", "RD");
 
             }
 
@@ -165,12 +187,11 @@ public class Sever {
 
     /**
      * Exit the game function, used to delete the specified room.
-     *
      * @param messageBody The message's content
      */
     private void exitGame(String messageBody) {
         rooms.clear();
-        messageSent(messageBody, "EG", "EG");
+        messageSent1(messageBody, "EG", "EG");
     }
 
     /**
@@ -178,20 +199,23 @@ public class Sever {
      *
      * @param messageBody The input message's content
      */
-    private void inGame(String messageBody) {
+    private boolean inGame(String messageBody) {
         String roomID = messageBody.substring(5, 11);
         String[] room = rooms.get(roomID);
         if (messageBody.charAt(3) == '0') {
             room[0] = messageBody.substring(12, messageBody.indexOf('?'));
             if (!room[1].equals("Playing")) {
                 roundOver(roomID, room);
+                return false;
             }
         } else {
             room[1] = messageBody.substring(12, messageBody.indexOf('?'));
             if (!room[0].equals("Playing")) {
                 roundOver(roomID, room);
+                return false;
             }
         }
+        return false;
     }
 
     /**
@@ -201,9 +225,8 @@ public class Sever {
      * @param room   The room
      */
     private void roundOver(String roomID, String[] room) {
-        deleteAllMessage();
-        messageSent("IG|0|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
-        messageSent("IG|1|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
+        messageSent1("IG|0|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
+        messageSent2("IG|1|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
         room[4] = null;
         if (getWinner(Integer.parseInt(room[0]), Integer.parseInt(room[1])) == 0) {
             room[2] += "*";
@@ -217,7 +240,6 @@ public class Sever {
 
     /**
      * Start game function, used to change the player status of both parties in the specified room to Playing and return the card data of that room. If there is no card data yet, the getCardsMessage () function is called to generate card data and store and return it.
-     *
      * @param messageBody The input message's content
      */
     private void startGame(String messageBody) {
@@ -231,32 +253,32 @@ public class Sever {
         } else {
             cards = room[4];
         }
-        messageSent("SG|1|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards, "SG", "SG");
-        messageSent("SG|0|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards, "SG", "SG");
+        messageSent1("SG|0|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards, "SG", "SG");
+        messageSent2("SG|1|" + messageBody.substring(5, messageBody.indexOf('?')) + "|" + cards, "SG", "SG");
     }
 
     /**
      * Entry room function, used to change player2 to waiting in the specified room in rooms (player1 has already entered the room by default when creating the room).
-     *
      * @param messageBody The input message's content
-     * @param oneStepID   The message One-Step-ID, used for client check the message return to whom.
+     * @param oneStepID The message One-Step-ID, used for client check the message return to whom.
      */
     private void entryRoom(String messageBody, String oneStepID) {
         String roomID = messageBody.substring(5, messageBody.indexOf('?'));
         try {
             String[] room = rooms.get(roomID);
+
             if (room[1] == null) {
                 room[1] = "Waiting";
-                String segSent = "ER|1|" + roomID + "|Y" + oneStepID;
-                messageSent(segSent, "ER", "ER");
+                String segSent = "ER|1|" + room[5] + "|" + roomID + "|Y" + oneStepID;
+                messageSent2(segSent, "ER", "ER");
             } else {
-                String segSent = "ER|1|" + roomID + "|N" + oneStepID;
-                messageSent(segSent, "ER", "ER");
+                String segSent = "ER|1|" + room[5] + "|" + roomID + "|N" + oneStepID;
+                messageSent2(segSent, "ER", "ER");
             }
         } catch (NullPointerException e) {
-            String segSent = "ER|1|" + roomID + "|N" + oneStepID;
+            String segSent = "ER|1|" + "1" + roomID + "|N" + oneStepID;
             System.out.println(e.getMessage());
-            messageSent(segSent, "ER", "ER");
+            messageSent2(segSent, "ER", "ER");
         }
 
     }
@@ -266,11 +288,11 @@ public class Sever {
      *
      * @param oneStepID The message One-Step-ID, used for client check the message return to whom.
      */
-    private void creatNewRoom(String oneStepID) {
+    private void creatNewRoom(String oneStepID, String messageBody) {
         String roomID = getRandomID("NRN|0|");
-        rooms.put(roomID.substring(6), new String[]{"Waiting", null, "", "", null});
+        rooms.put(roomID.substring(6), new String[]{"Waiting", null, "", "", null, String.valueOf(messageBody.charAt(6))});
         String megSent = roomID + oneStepID;
-        messageSent(megSent, "NRN", "NRN");
+        messageSent1(megSent, "NRN", "NRN");
     }
 
     /**
@@ -299,28 +321,27 @@ public class Sever {
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .build();
         ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
-                .queueUrl(inputUrl)
+                .queueUrl(outputUrl1)
                 .maxNumberOfMessages(10)
                 .waitTimeSeconds(10)
                 .build();
         ReceiveMessageResponse receiveResponse = sqsClient.receiveMessage(receiveRequest);
         for (Message message : receiveResponse.messages()) {
             DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder()
-                    .queueUrl(inputUrl)
+                    .queueUrl(outputUrl1)
                     .receiptHandle(message.receiptHandle())
                     .build();
             sqsClient.deleteMessage(deleteRequest);
         }
-
         receiveRequest = ReceiveMessageRequest.builder()
-                .queueUrl(outputUrl)
+                .queueUrl(outputUrl2)
                 .maxNumberOfMessages(10)
                 .waitTimeSeconds(10)
                 .build();
         receiveResponse = sqsClient.receiveMessage(receiveRequest);
         for (Message message : receiveResponse.messages()) {
             DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder()
-                    .queueUrl(outputUrl)
+                    .queueUrl(outputUrl2)
                     .receiptHandle(message.receiptHandle())
                     .build();
             sqsClient.deleteMessage(deleteRequest);
