@@ -13,8 +13,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Sever {
     HashMap<String, String[]> rooms = new HashMap<>();
-    // Due to AWS not allowing urls to be placed in public areas, the urls in the GitHub library have been processed but the urls in the files running locally and on the server are correct.
-
+    //Due to AWS not allowing urls to be placed in public areas, the urls in the GitHub library have been processed but the urls in the files running locally and on the server are correct.
     String inputUrl = "https://truly URL has be hided";
     String outputUrl1 = "https://truly URL has be hided";
     String outputUrl2 = "https://truly URL has be hided";
@@ -130,7 +129,7 @@ public class Sever {
         ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
                 .queueUrl(inputUrl)
                 .maxNumberOfMessages(3)
-                .waitTimeSeconds(10)
+                .waitTimeSeconds(5)
                 .build();
 
         ReceiveMessageResponse receiveResponse = sqsClient.receiveMessage(receiveRequest);
@@ -140,7 +139,6 @@ public class Sever {
             String groupID = messageBody.substring(messageBody.indexOf('?'));
 
             System.out.println("The message polled is: " + messageBody);
-
 
             // NRN - New Room
             if (messageBody.startsWith("NRN")) {
@@ -154,8 +152,15 @@ public class Sever {
 
             // RD - Ready
             else if (messageBody.startsWith("RD")) {
-                String megSent = messageBody.substring(0, 3) + "0" + messageBody.substring(4);
-                messageSent1(megSent, "RD", "RD");
+                String[] room = rooms.get(messageBody.substring(5, 11));
+                if (room != null) {
+                    if (room[0].equals("Waiting") && room[1].equals("Waiting")) {
+                        room[0] = "Ready";
+                        room[1] = "Ready";
+                        String megSent = messageBody.substring(0, 3) + "0" + messageBody.substring(4);
+                        messageSent1(megSent, "RD", "RD");
+                    }
+                }
 
             }
 
@@ -190,8 +195,9 @@ public class Sever {
      * @param messageBody The message's content
      */
     private void exitGame(String messageBody) {
-        rooms.clear();
+        rooms.remove(messageBody.substring(5, 11));
         messageSent1(messageBody, "EG", "EG");
+        messageSent2(messageBody, "EG", "EG");
     }
 
     /**
@@ -199,42 +205,40 @@ public class Sever {
      *
      * @param messageBody The input message's content
      */
-    private boolean inGame(String messageBody) {
+    private void inGame(String messageBody) {
         String roomID = messageBody.substring(5, 11);
         String[] room = rooms.get(roomID);
+        if (room == null) {
+            return;
+        }
         if (messageBody.charAt(3) == '0') {
             room[0] = messageBody.substring(12, messageBody.indexOf('?'));
             if (!room[1].equals("Playing")) {
                 roundOver(roomID, room);
-                return false;
             }
         } else {
             room[1] = messageBody.substring(12, messageBody.indexOf('?'));
             if (!room[0].equals("Playing")) {
                 roundOver(roomID, room);
-                return false;
             }
         }
-        return false;
     }
 
     /**
-     * The end of turn function, used to compare the number of steps after both sides have achieved results, and the winner will be scored 1 point.
+     * The end of turn function, used to return the steps of both players and clear the card set. If the end of 5 rounds, clear the room
      *
      * @param roomID The input room id
      * @param room   The room
      */
     private void roundOver(String roomID, String[] room) {
+        room[3] += "*";
         messageSent1("IG|0|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
         messageSent2("IG|1|" + roomID + "|" + room[0] + "|" + room[1], "IG", "IG");
         room[4] = null;
-        if (getWinner(Integer.parseInt(room[0]), Integer.parseInt(room[1])) == 0) {
-            room[2] += "*";
-        } else if (getWinner(Integer.parseInt(room[0]), Integer.parseInt(room[1])) == 1) {
-            room[3] += "*";
-        } else {
-            room[2] += "*";
-            room[3] += "*";
+        room[0] = "Ready";
+        room[1] = "Ready";
+        if (room[3].length() == 5) {
+            rooms.remove(roomID);
         }
     }
 
@@ -244,6 +248,9 @@ public class Sever {
      */
     private void startGame(String messageBody) {
         String[] room = rooms.get(messageBody.substring(5, messageBody.indexOf('?')));
+        if (room == null || !(room[0].equals("Ready") && room[1].equals("Ready"))) {
+            return;
+        }
         room[0] = "Playing";
         room[1] = "Playing";
         String cards;
@@ -266,7 +273,9 @@ public class Sever {
         String roomID = messageBody.substring(5, messageBody.indexOf('?'));
         try {
             String[] room = rooms.get(roomID);
-
+            if (!room[0].equals("Waiting")) {
+                return;
+            }
             if (room[1] == null) {
                 room[1] = "Waiting";
                 String segSent = "ER|1|" + room[5] + "|" + roomID + "|Y" + oneStepID;
@@ -278,14 +287,12 @@ public class Sever {
         } catch (NullPointerException e) {
             String segSent = "ER|1|" + "1" + roomID + "|N" + oneStepID;
             System.out.println(e.getMessage());
-            messageSent2(segSent, "ER", "ER");
+            messageSent2(segSent, "ER","ER");
         }
-
     }
 
     /**
      * Used to create a new room in rooms and send the room number message.
-     *
      * @param oneStepID The message One-Step-ID, used for client check the message return to whom.
      */
     private void creatNewRoom(String oneStepID, String messageBody) {
@@ -293,59 +300,6 @@ public class Sever {
         rooms.put(roomID.substring(6), new String[]{"Waiting", null, "", "", null, String.valueOf(messageBody.charAt(6))});
         String megSent = roomID + oneStepID;
         messageSent1(megSent, "NRN", "NRN");
-    }
-
-    /**
-     * Return the winner by comparing the scores of player1 and player2.
-     *
-     * @param score1 The player1's score
-     * @param score2 The player2's score
-     * @return The winner: 0 - Player1; 1 - Player2; 2 - Same score
-     */
-    int getWinner(int score1, int score2) {
-        if (score1 > score2) {
-            return 0;
-        } else if (score1 < score2) {
-            return 1;
-        } else {
-            return 2;
-        }
-    }
-
-    /**
-     * Delete all message functions, used to clear all residual messages before starting a new game.
-     */
-    void deleteAllMessage() {
-        SqsClient sqsClient = SqsClient.builder()
-                .region(position)
-                .credentialsProvider(DefaultCredentialsProvider.create())
-                .build();
-        ReceiveMessageRequest receiveRequest = ReceiveMessageRequest.builder()
-                .queueUrl(outputUrl1)
-                .maxNumberOfMessages(10)
-                .waitTimeSeconds(10)
-                .build();
-        ReceiveMessageResponse receiveResponse = sqsClient.receiveMessage(receiveRequest);
-        for (Message message : receiveResponse.messages()) {
-            DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder()
-                    .queueUrl(outputUrl1)
-                    .receiptHandle(message.receiptHandle())
-                    .build();
-            sqsClient.deleteMessage(deleteRequest);
-        }
-        receiveRequest = ReceiveMessageRequest.builder()
-                .queueUrl(outputUrl2)
-                .maxNumberOfMessages(10)
-                .waitTimeSeconds(10)
-                .build();
-        receiveResponse = sqsClient.receiveMessage(receiveRequest);
-        for (Message message : receiveResponse.messages()) {
-            DeleteMessageRequest deleteRequest = DeleteMessageRequest.builder()
-                    .queueUrl(outputUrl2)
-                    .receiptHandle(message.receiptHandle())
-                    .build();
-            sqsClient.deleteMessage(deleteRequest);
-        }
     }
 
 }
