@@ -13,7 +13,8 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public class Sever {
     HashMap<String, String[]> rooms = new HashMap<>();
-    //Due to AWS not allowing urls to be placed in public areas, the urls in the GitHub library have been processed but the urls in the files running locally and on the server are correct.
+    // Due to AWS not allowing urls to be placed in public areas, the urls in the GitHub library have been processed but the urls in the files running locally and on the server are correct.
+
     String inputUrl = "https://truly URL has be hided";
     String outputUrl1 = "https://truly URL has be hided";
     String outputUrl2 = "https://truly URL has be hided";
@@ -42,7 +43,7 @@ public class Sever {
      * @param GroupHead The message's group id head
      * @param DPHead    The message's deduplication id head
      */
-    void messageSent1(String massage, String GroupHead, String DPHead) {
+    private void messageSent1(String massage, String GroupHead, String DPHead) {
         SqsClient sqsClient = SqsClient.builder()
                 .region(position)
                 .build();
@@ -65,7 +66,7 @@ public class Sever {
      * @param GroupHead The message's group id head
      * @param DPHead    The message's deduplication id head
      */
-    void messageSent2(String massage, String GroupHead, String DPHead) {
+    private void messageSent2(String massage, String GroupHead, String DPHead) {
         SqsClient sqsClient = SqsClient.builder()
                 .region(position)
                 .build();
@@ -86,7 +87,7 @@ public class Sever {
      *
      * @return card data in the format of "answer1 # answer2 # cardData"
      */
-    String getCardsMessage() {
+    private String getCardsMessage() {
         StringBuilder message = new StringBuilder();
         Set<Integer> cardNums = new LinkedHashSet<>();
         while (cardNums.size() < 24) {
@@ -113,7 +114,7 @@ public class Sever {
      * @param head message's group id head
      * @return head+id(6 digits)
      */
-    String getRandomID(String head) {
+    private String getRandomID(String head) {
         return head + ThreadLocalRandom.current().nextLong(100000, 1000000);
     }
 
@@ -192,6 +193,7 @@ public class Sever {
 
     /**
      * Exit the game function, used to delete the specified room.
+     *
      * @param messageBody The message's content
      */
     private void exitGame(String messageBody) {
@@ -244,6 +246,7 @@ public class Sever {
 
     /**
      * Start game function, used to change the player status of both parties in the specified room to Playing and return the card data of that room. If there is no card data yet, the getCardsMessage () function is called to generate card data and store and return it.
+     *
      * @param messageBody The input message's content
      */
     private void startGame(String messageBody) {
@@ -266,8 +269,9 @@ public class Sever {
 
     /**
      * Entry room function, used to change player2 to waiting in the specified room in rooms (player1 has already entered the room by default when creating the room).
+     *
      * @param messageBody The input message's content
-     * @param oneStepID The message One-Step-ID, used for client check the message return to whom.
+     * @param oneStepID   The message One-Step-ID, used for client check the message return to whom.
      */
     private void entryRoom(String messageBody, String oneStepID) {
         String roomID = messageBody.substring(5, messageBody.indexOf('?'));
@@ -287,12 +291,13 @@ public class Sever {
         } catch (NullPointerException e) {
             String segSent = "ER|1|" + "1" + roomID + "|N" + oneStepID;
             System.out.println(e.getMessage());
-            messageSent2(segSent, "ER","ER");
+            messageSent2(segSent, "ER", "ER");
         }
     }
 
     /**
      * Used to create a new room in rooms and send the room number message.
+     *
      * @param oneStepID The message One-Step-ID, used for client check the message return to whom.
      */
     private void creatNewRoom(String oneStepID, String messageBody) {
